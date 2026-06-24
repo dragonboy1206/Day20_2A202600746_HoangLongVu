@@ -3,18 +3,23 @@ lab:
   max_iterations: 6
   timeout_seconds: 60
 
+llm:
+  provider: ollama
+  base_url: http://localhost:11434
+  model: llama3.1:latest
+
 agents:
   supervisor:
-    model: gpt-4o-mini
+    model: llama3.1:latest
     temperature: 0.0
   researcher:
-    model: gpt-4o-mini
+    model: llama3.1:latest
     temperature: 0.2
   analyst:
-    model: gpt-4o-mini
+    model: llama3.1:latest
     temperature: 0.1
   writer:
-    model: gpt-4o-mini
+    model: llama3.1:latest
     temperature: 0.4
 
 benchmark:

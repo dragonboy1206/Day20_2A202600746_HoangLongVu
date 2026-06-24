@@ -21,7 +21,6 @@ dependencies = [
 
 [project.optional-dependencies]
 llm = [
-  "openai>=1.40",
   "langgraph>=0.2",
   "langchain-core>=0.2",
   "langsmith>=0.1"
@@ -49,7 +48,7 @@ select = ["E", "F", "I", "B", "UP", "SIM"]
 ignore = []
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 strict = true
 warn_return_any = true
 warn_unused_configs = true

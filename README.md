@@ -1,23 +1,11 @@
-# Lab 20: Multi-Agent Research System Starter
+# Lab 20: Hệ thống nghiên cứu Multi-Agent chạy Ollama
 
-Starter repo cho bài lab **Multi-Agent Systems**: xây dựng hệ thống nghiên cứu gồm **Supervisor + Researcher + Analyst + Writer** và benchmark với single-agent baseline.
+Đây là repo starter cho bài lab **Multi-Agent Systems** (hệ thống nhiều tác tử - nhiều thành phần AI cùng phối hợp để giải quyết một nhiệm vụ). Dự án đã được cấu hình mặc định để dùng **Ollama** (công cụ chạy mô hình AI cục bộ trên máy), không cần OpenAI API key.
 
-> Mục tiêu của repo này là cung cấp **production-grade skeleton** để học viên phát triển code cá nhân. Các phần logic quan trọng được để ở dạng `TODO` để học viên tự triển khai.
-
-## Learning outcomes
-
-Sau 2 giờ lab, học viên cần có thể:
-
-1. Thiết kế role rõ ràng cho nhiều agent.
-2. Xây dựng shared state đủ thông tin cho handoff.
-3. Thêm guardrail tối thiểu: max iterations, timeout, retry/fallback, validation.
-4. Trace được luồng chạy và giải thích agent nào làm gì.
-5. Benchmark single-agent vs multi-agent theo quality, latency, cost.
-
-## Architecture mục tiêu
+## Kiến trúc mục tiêu
 
 ```text
-User Query
+Câu hỏi người dùng
    |
    v
 Supervisor / Router
@@ -29,128 +17,208 @@ Supervisor / Router
 Trace + Benchmark Report
 ```
 
-## Cấu trúc repo
+Giải thích thuật ngữ:
+
+- `Agent` (tác tử): một khối xử lý có vai trò riêng, ví dụ tìm kiếm, phân tích hoặc viết câu trả lời.
+- `LLM` (mô hình ngôn ngữ lớn): mô hình AI có khả năng đọc, hiểu và sinh văn bản.
+- `Ollama`: công cụ giúp tải và chạy LLM cục bộ trên máy của bạn.
+- `Provider` (nhà cung cấp mô hình): nơi cung cấp mô hình AI. Trong repo này provider mặc định là `ollama`.
+- `Editable install` (cài đặt dạng chỉnh sửa trực tiếp): cài project sao cho khi bạn sửa code trong thư mục này, Python dùng ngay code mới.
+
+## Cài đặt
+
+### 1. Cài Ollama
+
+Tải Ollama tại:
 
 ```text
-.
-├── src/multi_agent_research_lab/
-│   ├── agents/              # Agent interfaces + skeletons
-│   ├── core/                # Config, state, schemas, errors
-│   ├── graph/               # LangGraph workflow skeleton
-│   ├── services/            # LLM, search, storage clients
-│   ├── evaluation/          # Benchmark/evaluation skeleton
-│   ├── observability/       # Logging/tracing hooks
-│   └── cli.py               # CLI entrypoint
-├── configs/                 # YAML configs for lab variants
-├── docs/                    # Lab guide, rubric, design notes
-├── tests/                   # Unit tests for skeleton behavior
-├── notebooks/               # Optional notebook entrypoint
-├── scripts/                 # Helper scripts
-├── .env.example             # Environment variables template
-├── pyproject.toml           # Python project config
-├── Dockerfile               # Containerized dev/runtime
-└── Makefile                 # Common commands
+https://ollama.com/download
 ```
 
-## Quickstart
+Sau khi cài xong, mở terminal và kiểm tra:
 
-### 1. Tạo môi trường
+```bash
+ollama --version
+```
+
+### 2. Tải model cục bộ
+
+Model mặc định của dự án là `llama3.1:latest`, vì model này đang có sẵn trên máy hiện tại.
+
+```bash
+ollama pull llama3.1
+```
+
+Nếu máy yếu hoặc thiếu RAM, có thể đổi sang model nhẹ hơn trong `.env`, ví dụ:
+
+```bash
+OLLAMA_MODEL=llama3.2:1b
+```
+
+### 3. Bật server Ollama
+
+Thông thường Ollama tự chạy nền. Nếu cần bật thủ công:
+
+```bash
+ollama serve
+```
+
+Kiểm tra server:
+
+```bash
+curl http://localhost:11434/api/tags
+```
+
+Nếu có JSON trả về là Ollama đã chạy.
+
+### 4. Tạo môi trường Python
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
-pip install -e "[dev]"
-cp .env.example .env
 ```
 
-### 2. Cấu hình API keys
+Windows PowerShell:
 
-Mở `.env` và điền key cần thiết.
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+macOS/Linux:
 
 ```bash
-OPENAI_API_KEY=...
-# optional
-LANGSMITH_API_KEY=...
-TAVILY_API_KEY=...
+source .venv/bin/activate
 ```
 
-### 3. Chạy smoke test
+### 5. Cài project
+
+```bash
+python -m pip install -e ".[dev]"
+```
+
+Nếu cần cài thêm nhóm thư viện workflow:
+
+```bash
+python -m pip install -e ".[dev,llm]"
+```
+
+## Cấu hình Ollama
+
+File `.env` đã được cấu hình sẵn:
+
+```bash
+LLM_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.1:latest
+```
+
+Giải thích:
+
+- `LLM_PROVIDER` (nhà cung cấp mô hình): chọn backend AI. Giá trị hiện tại là `ollama`.
+- `OLLAMA_BASE_URL` (địa chỉ gốc Ollama): nơi app gửi request tới Ollama.
+- `OLLAMA_MODEL` (tên mô hình Ollama): model sẽ được dùng khi gọi LLM.
+
+## Chạy kiểm tra
+
+```bash
+pytest
+ruff check src tests
+mypy src
+```
+
+Hoặc dùng Makefile:
 
 ```bash
 make test
+make lint
+make typecheck
+```
+
+## Chạy CLI
+
+CLI (command-line interface - giao diện dòng lệnh) là cách chạy chương trình bằng terminal.
+
+```bash
 python -m multi_agent_research_lab.cli --help
 ```
 
-### 4. Chạy baseline skeleton
+Chạy baseline:
 
 ```bash
 python -m multi_agent_research_lab.cli baseline \
-  --query "Research GraphRAG state-of-the-art and write a 500-word summary"
+  --query "Tóm tắt GraphRAG và viết câu trả lời ngắn gọn"
 ```
 
-Lệnh này chỉ chạy khung baseline tối giản. Học viên cần tự triển khai logic LLM thực tế trong `src/multi_agent_research_lab/services/llm_client.py`.
-
-### 5. Chạy multi-agent skeleton
+Chạy multi-agent skeleton:
 
 ```bash
 python -m multi_agent_research_lab.cli multi-agent \
-  --query "Research GraphRAG state-of-the-art and write a 500-word summary"
+  --query "Tóm tắt GraphRAG và viết câu trả lời ngắn gọn"
 ```
 
-Mặc định lệnh sẽ báo các `TODO` cần làm. Đây là chủ đích của starter repo.
+Lưu ý: các agent chính vẫn là skeleton (khung bài tập). Nghĩa là workflow multi-agent vẫn có các `TODO(student)` để bạn tự triển khai logic.
 
-## Milestones trong 2 giờ lab
+## Gọi Ollama trong code
 
-| Thời lượng | Milestone | File gợi ý |
-|---:|---|---|
-| 0-15' | Setup, chạy baseline skeleton | `cli.py`, `services/llm_client.py` |
-| 15-45' | Build Supervisor / router | `agents/supervisor.py`, `graph/workflow.py` |
-| 45-75' | Thêm Researcher, Analyst, Writer | `agents/*.py`, `core/state.py` |
-| 75-95' | Trace + benchmark single vs multi | `observability/tracing.py`, `evaluation/benchmark.py` |
-| 95-115' | Peer review theo rubric | `docs/peer_review_rubric.md` |
-| 115-120' | Exit ticket | `docs/lab_guide.md` |
+Client đã sẵn sàng tại:
 
-## Quy ước production trong repo
+```text
+src/multi_agent_research_lab/services/llm_client.py
+```
 
-- Tách rõ `agents`, `services`, `core`, `graph`, `evaluation`, `observability`.
-- Không hard-code API key trong code.
-- Tất cả input/output chính dùng Pydantic schema.
-- Có type hints, linting, formatting, unit test tối thiểu.
-- Có logging/tracing hook ngay từ đầu.
-- Không để agent chạy vô hạn: dùng `max_iterations`, `timeout_seconds`.
-- Có benchmark report thay vì chỉ demo output đẹp.
+Ví dụ dùng nhanh:
 
-## TODO chính cho học viên
+```python
+from multi_agent_research_lab.services.llm_client import LLMClient
 
-Tìm trong code các marker:
+client = LLMClient()
+response = client.complete(
+    system_prompt="Bạn là trợ lý AI trả lời bằng tiếng Việt.",
+    user_prompt="Giải thích ngắn gọn Ollama là gì.",
+)
+print(response.content)
+```
+
+## Chạy bằng Docker
+
+Khi chạy trong Docker, `localhost` là container chứ không phải máy host. Vì vậy Dockerfile dùng:
 
 ```bash
-grep -R "TODO(student)" -n src tests docs
+OLLAMA_BASE_URL=http://host.docker.internal:11434
 ```
 
-Các phần học viên cần tự làm:
+Build image:
 
-1. Implement LLM client.
-2. Implement web/search client hoặc mock search source.
-3. Implement routing decision trong Supervisor.
-4. Implement từng worker agent.
-5. Build LangGraph workflow.
-6. Thêm tracing provider thật: LangSmith, Langfuse hoặc OpenTelemetry.
-7. Viết benchmark report.
+```bash
+docker build -t multi-agent-research-lab .
+```
 
-## Deliverables
+Chạy:
 
-Học viên nộp:
+```bash
+docker run --rm multi-agent-research-lab --help
+```
 
-1. GitHub repo cá nhân.
-2. Screenshot trace hoặc link trace.
-3. `reports/benchmark_report.md` so sánh single vs multi-agent.
-4. Một đoạn giải thích failure mode và cách fix.
+## Cấu trúc repo
 
-## References
+```text
+src/multi_agent_research_lab/
+  agents/              # Agent interfaces + skeletons
+  core/                # Config, state, schemas, errors
+  graph/               # Workflow skeleton
+  services/            # LLM, search, storage clients
+  evaluation/          # Benchmark/evaluation skeleton
+  observability/       # Logging/tracing hooks
+  cli.py               # CLI entrypoint
+configs/               # Cấu hình YAML
+docs/                  # Tài liệu lab
+tests/                 # Unit tests
+```
 
-- Anthropic: Building effective agents — https://www.anthropic.com/engineering/building-effective-agents
-- OpenAI Agents SDK orchestration/handoffs — https://developers.openai.com/api/docs/guides/agents/orchestration
-- LangGraph concepts — https://langchain-ai.github.io/langgraph/concepts/
-- LangSmith tracing — https://docs.smith.langchain.com/
-- Langfuse tracing — https://langfuse.com/docs
+## TODO chính cho người học
+
+1. Dùng `LLMClient` trong baseline hoặc agent.
+2. Triển khai `ResearcherAgent`.
+3. Triển khai `AnalystAgent`.
+4. Triển khai `WriterAgent`.
+5. Triển khai `MultiAgentWorkflow`.
+6. Thêm benchmark report.
